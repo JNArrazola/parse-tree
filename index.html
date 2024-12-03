@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Árbol de Derivación</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Generador de Árbol de Derivación</h1>
+    <form id="inputForm">
+      <label for="startSymbol">Símbolo Inicial:</label>
+      <input type="text" id="startSymbol" required>
+
+      <label for="terminals">Símbolos Terminales (separados por comas):</label>
+      <input type="text" id="terminals" required>
+
+      <label for="nonTerminals">Símbolos No Terminales (separados por comas):</label>
+      <input type="text" id="nonTerminals" required>
+
+      <label for="rules">Reglas (formato: A -> aB | b):</label>
+      <textarea id="rules" rows="4" required></textarea>
+
+      <label for="inputString">Cadena de Entrada:</label>
+      <input type="text" id="inputString" required>
+
+      <button type="submit">Generar Árbol</button>
+    </form>
+    <div id="visualization">
+        <div id="tree-container">
+          <div id="tree"></div>
+        </div>
+        <div id="sequences"></div>
+      </div>
+      
+  </div>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
