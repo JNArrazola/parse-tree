@@ -25,103 +25,119 @@ document.getElementById('inputForm').addEventListener('submit', (e) => {
     const treeData = { name: startSymbol, children: [] };
     const nodesMap = { [startSymbol]: treeData };
     const sequences = [];
-    let successPath = null;
-  
+    let successPaths = []; 
+    const pathMap = {}; 
+
     while (queue.length > 0) {
-      const { node, path } = queue.shift();
-  
-      if (node.length > inputString.length) continue;
-  
-      let isCompatible = true;
-      for (let i = 0; i < node.length; i++) {
-        if (terminals.includes(node[i]) && node[i] !== inputString[i]) {
-          isCompatible = false;
+        const { node, path } = queue.shift();
+
+        if (node.length > inputString.length) continue;
+
+        let isCompatible = true;
+        for (let i = 0; i < node.length; i++) {
+            if (terminals.includes(node[i]) && node[i] !== inputString[i]) {
+                isCompatible = false;
+            }
         }
-      }
-  
-      if (node === inputString) {
-        successPath = path;
-        sequences.push({ path, success: true });
-        break; 
-      }
-  
-      sequences.push({ path, success: false });
-  
-      let isTerminalOnly = true;
-      const generatedChildren = new Set();
-      for (let i = 0; i < node.length; i++) {
-        if (nonTerminals.includes(node[i])) {
-          isTerminalOnly = false;
-          const expansions = rules[node[i]] || [];
-          for (const expansion of expansions) {
-            const newNode = node.slice(0, i) + expansion + node.slice(i + 1);
-  
-            if (generatedChildren.has(newNode)) continue;
-  
-            generatedChildren.add(newNode);
-            const child = { name: newNode, children: [] };
-            nodesMap[node].children.push(child);
-            nodesMap[newNode] = child;
-            queue.push({ node: newNode, path: [...path, newNode] });
-          }
-          break;
+
+        if (node === inputString) {
+            successPaths.push(path); 
+            sequences.push({ path, success: true });
+            pathMap[node] = pathMap[node] || [];
+            pathMap[node].push(path);
+            break; 
         }
-      }
-  
-      if (isTerminalOnly && node !== inputString) continue;
+
+        sequences.push({ path, success: false });
+
+        let isTerminalOnly = true;
+        const generatedChildren = new Set();
+        for (let i = 0; i < node.length; i++) {
+            if (nonTerminals.includes(node[i])) {
+                isTerminalOnly = false;
+                const expansions = rules[node[i]] || [];
+                for (const expansion of expansions) {
+                    const newNode = node.slice(0, i) + expansion + node.slice(i + 1);
+
+                    if (generatedChildren.has(newNode)) continue;
+
+                    generatedChildren.add(newNode);
+                    const child = { name: newNode, children: [] };
+                    nodesMap[node].children.push(child);
+                    nodesMap[newNode] = child;
+                    queue.push({ node: newNode, path: [...path, newNode] });
+                }
+                break;
+            }
+        }
+
+        if (isTerminalOnly && node !== inputString) continue;
+
+        pathMap[node] = pathMap[node] || [];
+        pathMap[node].push(path);
     }
-  
-    drawTree(treeData, successPath);
+
+    const highlightedNodes = new Set();
+    successPaths.forEach(successPath => {
+        successPath.forEach(node => highlightedNodes.add(node));
+    });
+
+    Object.keys(pathMap).forEach(node => {
+        if (pathMap[node].some(p => successPaths.some(sp => sp.includes(node)))) {
+            pathMap[node].forEach(path => path.forEach(n => highlightedNodes.add(n)));
+        }
+    });
+
+    drawTree(treeData, Array.from(highlightedNodes));
     displaySequences(sequences);
-  }
-  
-  
-  function drawTree(data, successPath) {
+}
+
+function drawTree(data, highlightedNodes) {
     const treeContainer = document.getElementById('tree-container');
     const containerWidth = treeContainer.clientWidth;
-    const height = calculateTreeHeight(data) * 150; 
-    const width = calculateTreeWidth(data) * 200; 
-  
+    const height = calculateTreeHeight(data) * 150;
+    const width = calculateTreeWidth(data) * 200;
+
     const treeLayout = d3.tree().size([width, height - 100]);
     const root = d3.hierarchy(data);
     treeLayout(root);
-  
+
     d3.select('#tree').selectAll('*').remove();
     const svg = d3.select('#tree').append('svg')
-      .attr('width', width)
-      .attr('height', height);
-  
+        .attr('width', width)
+        .attr('height', height);
+
     const g = svg.append('g')
-      .attr('transform', `translate(${width / 2}, 50)`); 
-  
+        .attr('transform', `translate(${width / 2}, 50)`);
+
     g.selectAll('.link')
-      .data(root.links())
-      .enter().append('line')
-      .attr('class', 'link')
-      .attr('x1', d => d.source.x - width / 2)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x - width / 2)
-      .attr('y2', d => d.target.y)
-      .attr('stroke', '#aaa');
-  
+        .data(root.links())
+        .enter().append('line')
+        .attr('class', 'link')
+        .attr('x1', d => d.source.x - width / 2)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x - width / 2)
+        .attr('y2', d => d.target.y)
+        .attr('stroke', '#aaa');
+
     const node = g.selectAll('.node')
-      .data(root.descendants())
-      .enter().append('g')
-      .attr('class', 'node')
-      .attr('transform', d => `translate(${d.x - width / 2},${d.y})`);
-  
+        .data(root.descendants())
+        .enter().append('g')
+        .attr('class', 'node')
+        .attr('transform', d => `translate(${d.x - width / 2},${d.y})`);
+
     node.append('circle')
-      .attr('r', 30) 
-      .attr('fill', d => successPath && successPath.includes(d.data.name) ? 'yellow' : 'lightblue')
-      .on('click', (event, d) => showFullContent(d.data.name)); // Mostrar contenido completo al hacer clic
-  
+        .attr('r', 30)
+        .attr('fill', d => highlightedNodes.includes(d.data.name) ? 'yellow' : 'lightblue')
+        .on('click', (event, d) => showFullContent(d.data.name));
+
     node.append('text')
-      .text(d => truncateText(d.data.name, 10)) 
-      .attr('dy', 4)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '12px'); 
-  }
-  
+        .text(d => truncateText(d.data.name, 10))
+        .attr('dy', 4)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '12px');
+}
+
   function truncateText(text, maxLength) {
     return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
   }
