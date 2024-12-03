@@ -36,21 +36,19 @@ document.getElementById('inputForm').addEventListener('submit', (e) => {
       for (let i = 0; i < node.length; i++) {
         if (terminals.includes(node[i]) && node[i] !== inputString[i]) {
           isCompatible = false;
-          break;
         }
       }
-      if (!isCompatible) continue;
   
       if (node === inputString) {
         successPath = path;
         sequences.push({ path, success: true });
-        continue;
+        break; 
       }
   
       sequences.push({ path, success: false });
   
       let isTerminalOnly = true;
-      const generatedChildren = new Set(); 
+      const generatedChildren = new Set();
       for (let i = 0; i < node.length; i++) {
         if (nonTerminals.includes(node[i])) {
           isTerminalOnly = false;
@@ -76,6 +74,7 @@ document.getElementById('inputForm').addEventListener('submit', (e) => {
     drawTree(treeData, successPath);
     displaySequences(sequences);
   }
+  
   
   function drawTree(data, successPath) {
     const treeContainer = document.getElementById('tree-container');
@@ -171,7 +170,73 @@ document.getElementById('inputForm').addEventListener('submit', (e) => {
   
   function displaySequences(sequences) {
     const sequencesDiv = document.getElementById('sequences');
-    sequencesDiv.innerHTML = sequences.map(seq => 
-      `<div style="color: ${seq.success ? 'green' : 'black'}">${seq.path.join(' -> ')}</div>`).join('');
+    
+    const successfulPaths = sequences.filter(seq => seq.success);
+  
+    sequencesDiv.innerHTML = successfulPaths.map(seq => 
+      `<div style="color: green">${seq.path.join(' -> ')}</div>`
+    ).join('');
+  
+    if (successfulPaths.length === 0) {
+      sequencesDiv.innerHTML = `<div style="color: red">No solution found</div>`;
+    }
   }
+  
+  document.getElementById('importSettings').addEventListener('click', () => {
+    const fileInput = document.getElementById('fileInput');
+    fileInput.click();
+  });
+  
+  document.getElementById('fileInput').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const settings = JSON.parse(e.target.result);
+          loadSettings(settings);
+        } catch (err) {
+          alert('Error al leer el archivo: Formato inválido.');
+        }
+      };
+      reader.readAsText(file);
+    }
+  });
+  
+  document.getElementById('exportSettings').addEventListener('click', () => {
+    const settings = getCurrentSettings();
+    const fileName = prompt("Introduce el nombre del archivo (sin extensión):", "settings");
+  
+    if (fileName) {
+      const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.json`; 
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      alert("Exportación cancelada: No se proporcionó un nombre.");
+    }
+  });
+  
+  
+  function getCurrentSettings() {
+    return {
+      startSymbol: document.getElementById('startSymbol').value.trim(),
+      terminals: document.getElementById('terminals').value.split(',').map(t => t.trim()),
+      nonTerminals: document.getElementById('nonTerminals').value.split(',').map(nt => nt.trim()),
+      rules: document.getElementById('rules').value.trim(),
+      inputString: document.getElementById('inputString').value.trim(),
+    };
+  }
+  
+  function loadSettings(settings) {
+    document.getElementById('startSymbol').value = settings.startSymbol || '';
+    document.getElementById('terminals').value = (settings.terminals || []).join(', ');
+    document.getElementById('nonTerminals').value = (settings.nonTerminals || []).join(', ');
+    document.getElementById('rules').value = settings.rules || '';
+    document.getElementById('inputString').value = settings.inputString || '';
+  }
+  
   
